@@ -7,16 +7,40 @@ struct block
 {
     // TODO: 如果要考虑对其，这里跨平台的不统一可能导致无法对齐
     size_t payload_size; 
-    int is_allocated;           
-    block_t* next; 
-    block_t* prev;
-    unsigned char payload[0];   // 真正提供出去的地址
+    int is_allocated;        
+    block_t* prev;  
+    block_t* next;              // TODO: 感觉可以通过payload计算出来，但可能因为对齐之类的原因，有点难算；之后优化               
+    block_t* free_next;         // free block中的next
+    block_t* free_prev;         // free block中的prev
+    // unsigned char payload[0];   // 真正提供出去的地址
 };
 
 static block_t* block_head = NULL;
+static block_t* block_tail = NULL;
 static block_t* free_head = NULL;
 unsigned long largest_free_size = 0;    // TODO: 添加这个的全局逻辑
 unsigned long free_size_sum = 0;        // TODO: 添加这个的全局逻辑
+
+static block_t* get_next_block(block_t* curr){
+    // if(curr == block_tail){
+    //     return NULL;
+    // }
+    // size_t offset = curr->payload_size + sizeof(struct block);
+    // return (block_t*)((unsigned char*)curr + offset);
+    return curr->next;
+}
+
+static void print_list(){
+    if(block_head == NULL){
+        printf("链表中尚未有元素");
+        return;
+    }
+    printf("=================\n");
+    for(block_t* ptr = block_head; ptr != NULL; ptr = get_next_block(ptr)){
+        printf("payload_size = %lu, is_allocated = %d\n",ptr->payload_size, ptr->is_allocated);
+    }
+    printf("=================\n");
+}
 
 // TODO: 使用first fit的策略找到合适的block
 static block_t* find_fit_ff(size_t payload_size){
@@ -35,10 +59,17 @@ static block_t* extend_heap(size_t payload_size){
 
     new_ptr->payload_size = payload_size;
     new_ptr->is_allocated = 1;
+    new_ptr->prev = block_tail;
 
+    if(block_tail != NULL){
+        block_tail->next = new_ptr;
+    }
+    block_tail = new_ptr;
     if(block_head == NULL){
         block_head = new_ptr;
     }
+
+    // print_list(block_head);
 
     return new_ptr;
 }
