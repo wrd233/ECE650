@@ -58,14 +58,54 @@ static void print_free_list(){
     printf("~~~~~~~~~~~~~~~~~~\n");
 }
 
-// TODO: 使用first fit的策略找到合适的block
+// 使用first fit的策略找到合适的block
 static block_t* find_fit_ff(size_t payload_size){
+    printf("尝试寻找ff，当前寻找的size为%lu\n",payload_size);
+    
+    block_t* current = free_head;
+
+    while (current != NULL) {
+        // 判断该节点能否承载payload
+        if(current->payload_size >= payload_size){
+            return current;
+        }
+        current = current->free_next;
+
+        // 如果当前节点等于头结点，说明已经遍历完整个链表
+        if (current == free_head) {
+            break;
+        }
+    }
+
     return NULL;
 }
 
-// TODO: 使用best fit的策略找到合适的block
+// 使用best fit的策略找到合适的block
 static block_t* find_fit_bf(size_t payload_size){
-    return NULL;
+    printf("尝试寻找bf，当前寻找的size为%lu\n",payload_size);
+
+    block_t* current = free_head;
+    block_t* best_fit_ptr = NULL;
+
+    while (current != NULL) {
+        // 判断该节点能否承载payload
+        if(current->payload_size >= payload_size){
+            if(best_fit_ptr == NULL){
+                best_fit_ptr = current;
+            }else{
+                best_fit_ptr = best_fit_ptr->payload_size < current->payload_size ? best_fit_ptr : current;
+            }
+        }
+
+        current = current->free_next;
+
+        // 如果当前节点等于头结点，说明已经遍历完整个链表
+        if (current == free_head) {
+            break;
+        }
+    }
+
+    return best_fit_ptr;
 }
 
 
@@ -169,6 +209,11 @@ static void block_free(block_t* block){
     print_free_list();
 }
 
+// TODO: 将blcok分割成payload_size和剩下的部分，分割失败返回NULL
+static block_t* splitBlock(block_t* block, size_t payload_size){
+    // TODO: 分割空闲块，并将分割之后的后半个block加入到空闲链表当中
+    return block;
+}
 
 void * ff_malloc(size_t size){
     // 首先尝试从空闲链表中的空闲块中分配
@@ -177,7 +222,12 @@ void * ff_malloc(size_t size){
     if(block_ptr == NULL){  // 此时空闲链表中没有合适的块，所以需要进行拓展
         block_ptr = extend_heap(size);
     }else{  // 从空闲链表中找到合适的块
-        // TODO: 从空闲链表中删除这一空闲块
+        // 从空闲链表中删除这一空闲块
+        drop_from_free_list(block_ptr);
+        // 如果该空闲块足够大，那么尝试将其分裂
+        block_ptr = splitBlock(block_ptr, size);
+
+        block_ptr->is_allocated = 1;
     }
     return block_ptr;
 }
@@ -189,7 +239,12 @@ void * bf_malloc(size_t size){
     if(block_ptr == NULL){  // 此时空闲链表中没有合适的块，所以需要进行拓展
         block_ptr = extend_heap(size);
     }else{  // 从空闲链表中找到合适的块
-        // TODO: 从空闲链表中删除这一空闲块
+        // 从空闲链表中删除这一空闲块
+        drop_from_free_list(block_ptr);
+        // 如果该空闲块足够大，那么尝试将其分裂
+        block_ptr = splitBlock(block_ptr, size);
+
+        block_ptr->is_allocated = 1;
     }
     return block_ptr;
 }
