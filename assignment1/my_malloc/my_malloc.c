@@ -32,35 +32,35 @@ static block_t* get_next_block(block_t* curr){
 }
 
 static void print_list(){
-    if(block_head == NULL){
-        printf("链表中尚未有元素");
-        return;
-    }
-    printf("=================\n");
-    for(block_t* ptr = block_head; ptr != NULL; ptr = get_next_block(ptr)){
-        printf("payload_size = %lu, is_allocated = %d\n",ptr->payload_size, ptr->is_allocated);
-    }
-    printf("=================\n");
+    // if(block_head == NULL){
+    //     printf("链表中尚未有元素");
+    //     return;
+    // }
+    // printf("=================\n");
+    // for(block_t* ptr = block_head; ptr != NULL; ptr = get_next_block(ptr)){
+    //     printf("payload_size = %lu, is_allocated = %d\n",ptr->payload_size, ptr->is_allocated);
+    // }
+    // printf("=================\n");
 }
 
 static void print_free_list(){
-    if(block_head == NULL){
-        printf("free list中尚未有元素");
-        return;
-    }
-    printf("~~~~~~~~~~~~~~~~~~\n");
-    block_t* ptr = free_head;
-    while(ptr->free_next != free_head){
-        printf("payload_size = %lu, is_allocated = %d\n",ptr->payload_size, ptr->is_allocated);
-         ptr = ptr->free_next;
-    }
-    printf("payload_size = %lu, is_allocated = %d\n",ptr->payload_size, ptr->is_allocated);
-    printf("~~~~~~~~~~~~~~~~~~\n");
+    // if(block_head == NULL){
+    //     printf("free list中尚未有元素");
+    //     return;
+    // }
+    // printf("~~~~~~~~~~~~~~~~~~\n");
+    // block_t* ptr = free_head;
+    // while(ptr->free_next != free_head){
+    //     printf("payload_size = %lu, is_allocated = %d\n",ptr->payload_size, ptr->is_allocated);
+    //      ptr = ptr->free_next;
+    // }
+    // printf("payload_size = %lu, is_allocated = %d\n",ptr->payload_size, ptr->is_allocated);
+    // printf("~~~~~~~~~~~~~~~~~~\n");
 }
 
 // 使用first fit的策略找到合适的block
 static block_t* find_fit_ff(size_t payload_size){
-    printf("尝试寻找ff，当前寻找的size为%lu\n",payload_size);
+    // printf("尝试寻找ff，当前寻找的size为%lu\n",payload_size);
     
     block_t* current = free_head;
 
@@ -82,7 +82,7 @@ static block_t* find_fit_ff(size_t payload_size){
 
 // 使用best fit的策略找到合适的block
 static block_t* find_fit_bf(size_t payload_size){
-    printf("尝试寻找bf，当前寻找的size为%lu\n",payload_size);
+    // printf("尝试寻找bf，当前寻找的size为%lu\n",payload_size);
 
     block_t* current = free_head;
     block_t* best_fit_ptr = NULL;
@@ -186,7 +186,7 @@ static void add_to_free_list(block_t* block){
 
 // 如果原先的内存池不够了，那么就拓展制定大小的block
 static block_t* extend_heap(size_t payload_size){
-    printf("调用了extend\n");
+    // printf("调用了extend\n");
     size_t size_sum = sizeof(struct block) + payload_size;
     block_t* new_ptr = sbrk(size_sum);
 
@@ -212,7 +212,7 @@ static block_t* extend_heap(size_t payload_size){
 
 // 收回内存的时候直接合并相邻的; 把新的空闲块加入到空闲链表当中(头插吧要不)
 static void block_free(block_t* block){
-    printf("调用了free\n");
+    // printf("调用了free\n");
     if(free_head == NULL){
         free_head = block;
     }
@@ -249,10 +249,9 @@ static void block_free(block_t* block){
 static block_t* splitBlock(block_t* block, size_t payload_size){
     // TODO: 分割空闲块，并将分割之后的后半个block加入到空闲链表当中
     assert(block != NULL);
-    printf("当前块的大小为%lu, 期望分配%lu\n",block->payload_size, payload_size);
+    // printf("当前块的大小为%lu, 期望分配%lu\n",block->payload_size, payload_size);
 
     if(block->payload_size >= sizeof(block_t) + payload_size){
-        printf("允许分裂\n");
         // 创建新的节点
         size_t offset = payload_size + sizeof(block_t);
         block_t* new_block_ptr = (block_t*)((unsigned char*)block + offset);
@@ -275,9 +274,9 @@ static block_t* splitBlock(block_t* block, size_t payload_size){
         new_block_ptr->prev = block;
 
         // 测试
-        printf("[分裂完成]分成了%lu和%lu大小的两块\n",block->payload_size, new_block_ptr->payload_size);
-        print_list();
-        print_free_list();
+        // printf("[分裂完成]分成了%lu和%lu大小的两块\n",block->payload_size, new_block_ptr->payload_size);
+        // print_list();
+        // print_free_list();
     }
     return block;
 }
@@ -296,7 +295,7 @@ void * ff_malloc(size_t size){
 
         block_ptr->is_allocated = 1;
     }
-    return block_ptr;
+    return (unsigned char*)block_ptr + sizeof(block_t);
 }
 
 void * bf_malloc(size_t size){
@@ -313,17 +312,16 @@ void * bf_malloc(size_t size){
 
         block_ptr->is_allocated = 1;
     }
-    return block_ptr;
+    return (unsigned char*)block_ptr + sizeof(block_t);
 }
 
-
 void ff_free(void * ptr){
-    block_free(ptr);
+    block_free((block_t*)((unsigned char*)ptr - sizeof(block_t)));
 }
 
 
 void bf_free(void * ptr){
-    block_free(ptr);
+    block_free((block_t*)((unsigned char*)ptr - sizeof(block_t)));
 }
 
 unsigned long get_largest_free_data_segment_size() {
