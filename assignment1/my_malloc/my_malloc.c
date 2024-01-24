@@ -116,8 +116,6 @@ static void drop_from_free_list(block_t* block){
     // 将当前节点从双向链表中去除
     if(block->free_next == block){  // 此时free list中只有一个元素
         free_head = NULL;
-        block->free_next = NULL;
-        block->free_prev = NULL;
     }else{
         if (free_head == block) {
             free_head = block->free_next;
@@ -125,10 +123,10 @@ static void drop_from_free_list(block_t* block){
         block->free_prev->free_next = block->free_next;
         block->free_next->free_prev = block->free_prev;
     }
-
+    block->free_next = NULL;
+    block->free_prev = NULL;
     // print_free_list();
 }
-
 
 static void add_to_free_list(block_t* block){
     assert(block != NULL);
@@ -147,6 +145,44 @@ static void add_to_free_list(block_t* block){
     free_head = block;
     // print_free_list();
 }
+
+// static void drop_from_list(block_t* block){
+//     assert(block!=NULL);
+//     assert(block->next!=NULL && block->prev!=NULL);
+
+//     // 将当前节点从双向链表中去除
+//     if(block->next == block){  // 此时free list中只有一个元素
+//         block_head = NULL;
+//         block->next = NULL;
+//         block->prev = NULL;
+//     }else{
+//         if (block_head == block) {
+//             block_head = block->next;
+//         }
+//         block->prev->next = block->next;
+//         block->next->prev = block->prev;
+//     }
+
+//     // print_free_list();
+// }
+
+// static void add_to_list(block_t* block){
+//     assert(block != NULL);
+//     assert(block->prev==NULL && block->next == NULL);
+
+//     if(block_head != NULL){
+//         block->next = block_head;
+//         block->prev = block_head->prev;
+//         block_head->prev = block;
+//         block->prev->next = block;
+//     }else{
+//         block->next = block;
+//         block->prev = block;
+//     }
+
+//     block_head = block;
+//     // print_free_list();
+// }
 
 // 如果原先的内存池不够了，那么就拓展制定大小的block
 static block_t* extend_heap(size_t payload_size){
@@ -212,6 +248,37 @@ static void block_free(block_t* block){
 // TODO: 将blcok分割成payload_size和剩下的部分，分割失败返回NULL
 static block_t* splitBlock(block_t* block, size_t payload_size){
     // TODO: 分割空闲块，并将分割之后的后半个block加入到空闲链表当中
+    assert(block != NULL);
+    printf("当前块的大小为%lu, 期望分配%lu\n",block->payload_size, payload_size);
+
+    if(block->payload_size >= sizeof(block_t) + payload_size){
+        printf("允许分裂\n");
+        // 创建新的节点
+        size_t offset = payload_size + sizeof(block_t);
+        block_t* new_block_ptr = (block_t*)((unsigned char*)block + offset);
+        new_block_ptr->free_prev = NULL;
+        new_block_ptr->free_next = NULL;
+        new_block_ptr->is_allocated = 0;
+        new_block_ptr->payload_size = block->payload_size - sizeof(block_t) - payload_size;
+        if(block_tail == block){
+            block_tail = new_block_ptr;
+        }
+        // 更新block的数据
+        block->payload_size = payload_size;
+        // 重构free_list
+        drop_from_free_list(block);
+        add_to_free_list(block);
+        add_to_free_list(new_block_ptr);
+        // 重构list
+        new_block_ptr->next = block->next;
+        block->next = new_block_ptr;
+        new_block_ptr->prev = block;
+
+        // 测试
+        printf("[分裂完成]分成了%lu和%lu大小的两块\n",block->payload_size, new_block_ptr->payload_size);
+        print_list();
+        print_free_list();
+    }
     return block;
 }
 
@@ -222,10 +289,10 @@ void * ff_malloc(size_t size){
     if(block_ptr == NULL){  // 此时空闲链表中没有合适的块，所以需要进行拓展
         block_ptr = extend_heap(size);
     }else{  // 从空闲链表中找到合适的块
-        // 从空闲链表中删除这一空闲块
-        drop_from_free_list(block_ptr);
         // 如果该空闲块足够大，那么尝试将其分裂
         block_ptr = splitBlock(block_ptr, size);
+        // 从空闲链表中删除这一空闲块
+        drop_from_free_list(block_ptr);
 
         block_ptr->is_allocated = 1;
     }
@@ -239,10 +306,10 @@ void * bf_malloc(size_t size){
     if(block_ptr == NULL){  // 此时空闲链表中没有合适的块，所以需要进行拓展
         block_ptr = extend_heap(size);
     }else{  // 从空闲链表中找到合适的块
-        // 从空闲链表中删除这一空闲块
-        drop_from_free_list(block_ptr);
         // 如果该空闲块足够大，那么尝试将其分裂
         block_ptr = splitBlock(block_ptr, size);
+        // 从空闲链表中删除这一空闲块
+        drop_from_free_list(block_ptr);
 
         block_ptr->is_allocated = 1;
     }
