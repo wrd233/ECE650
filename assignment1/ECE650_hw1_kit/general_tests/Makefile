@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-O3 -fPIC -DDEBUG
 MALLOC_VERSION=BF
-WDIR=..
+WDIR=/home/parallels/work/ECE650/assignment1/my_malloc
 
 all: mymalloc_test
 
