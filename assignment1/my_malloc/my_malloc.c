@@ -6,7 +6,6 @@
 typedef struct block block_t;
 struct block
 {
-    // TODO: 如果要考虑对其，这里跨平台的不统一可能导致无法对齐
     size_t payload_size; 
     int is_allocated;        
     block_t* prev;  
@@ -21,6 +20,22 @@ static block_t* block_tail = NULL;
 static block_t* free_head = NULL;
 unsigned long largest_free_size = 0;    // TODO: 添加这个的全局逻辑
 unsigned long free_size_sum = 0;        // TODO: 添加这个的全局逻辑
+
+static void calFree(){
+    if(free_head == NULL){
+        return;
+    }
+    block_t* ptr = free_head;
+    free_size_sum = 0;
+    largest_free_size = 0;
+    while(ptr->free_next != free_head){
+        free_size_sum += ptr->payload_size;
+        largest_free_size = largest_free_size > ptr->payload_size ? largest_free_size : ptr->payload_size;
+        ptr = ptr->free_next;
+    }
+    free_size_sum += ptr->payload_size;
+    largest_free_size = largest_free_size > ptr->payload_size ? largest_free_size : ptr->payload_size;
+}
 
 static block_t* get_next_block(block_t* curr){
     // if(curr == block_tail){
@@ -295,6 +310,7 @@ void * ff_malloc(size_t size){
 
         block_ptr->is_allocated = 1;
     }
+    calFree();
     return (unsigned char*)block_ptr + sizeof(block_t);
 }
 
@@ -312,16 +328,19 @@ void * bf_malloc(size_t size){
 
         block_ptr->is_allocated = 1;
     }
+    calFree();
     return (unsigned char*)block_ptr + sizeof(block_t);
 }
 
 void ff_free(void * ptr){
     block_free((block_t*)((unsigned char*)ptr - sizeof(block_t)));
+    calFree();
 }
 
 
 void bf_free(void * ptr){
     block_free((block_t*)((unsigned char*)ptr - sizeof(block_t)));
+    calFree();
 }
 
 unsigned long get_largest_free_data_segment_size() {

@@ -1,5 +1,4 @@
 CC = gcc
-# CFLAGS = -Wall -Werror -fPIC
 CFLAGS = -fPIC
 
 all: libmymalloc.so
