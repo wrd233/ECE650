@@ -2,6 +2,7 @@
 #define MY_MALLOC_H
 #include <stdio.h>
 #include <stdlib.h>
+#include "macro.h"
 
 //First Fit malloc
 void * ff_malloc(size_t size);

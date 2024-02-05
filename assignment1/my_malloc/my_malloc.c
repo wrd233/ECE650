@@ -123,9 +123,12 @@ static block_t* find_fit_bf(size_t payload_size){
     return best_fit_ptr;
 }
 
-
+/*
+ *  
+*/
 static void drop_from_free_list(block_t* block){
     assert(block!=NULL);
+    assert(block->is_allocated == 0);
     assert(block->free_next!=NULL && block->free_prev!=NULL);
 
     // 将当前节点从双向链表中去除
