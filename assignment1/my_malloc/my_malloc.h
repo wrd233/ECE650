@@ -39,6 +39,7 @@ static block_t* free_head = NULL;
 void print_free_list();
 void drop_from_free_list(block_t* block);
 void add_to_free_list(block_t* block);
+void block_free(block_t* block);
 block_t* extend_heap(size_t payload_size);
 
 #endif /* MY_MALLOC_H */

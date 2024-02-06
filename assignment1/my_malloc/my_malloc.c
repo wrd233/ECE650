@@ -36,13 +36,13 @@ void print_list(){
         INFO("list中尚未有元素\n");
         return;
     }
-    INFO("~~~~~~~~~~~~~~~~~~\n");
+    INFO("------------------(list)\n");
     block_t* ptr = block_head;
     while(ptr != NULL){
         INFO("%lu/%d->",ptr->payload_size, ptr->is_allocated);
         ptr = ptr->next;
     }
-    INFO("\n~~~~~~~~~~~~~~~~~~\n");
+    INFO("\n------------------\n");
 }
 
 void print_free_list(){
@@ -50,7 +50,7 @@ void print_free_list(){
         INFO("free list中尚未有元素\n");
         return;
     }
-    INFO("~~~~~~~~~~~~~~~~~~\n");
+    INFO("~~~~~~~~~~~~~~~~~~(free_list)\n");
     block_t* ptr = free_head;
     while(ptr != NULL){
         INFO("%lu/%d->",ptr->payload_size, ptr->is_allocated);
@@ -117,8 +117,8 @@ void drop_from_free_list(block_t* block){
     assert(block->is_allocated == 0);
 
     // 将当前节点从双向链表中去除
-    if(free_head == block && block->free_prev == NULL){  // 此时free list中只有一个元素
-        assert(block->free_next == NULL);
+    if(free_head == block && block->free_next == NULL){  // 此时free list中只有一个元素
+        assert(block->free_prev == NULL);
         free_head = NULL;
     }else{
         assert(block->free_next!=NULL || block->free_prev!=NULL);
@@ -163,6 +163,22 @@ void add_to_free_list(block_t* block){
  * TODO: 感觉没必要分离出来这么一个
 */
 void drop_from_list(block_t* block){
+    assert(block!=NULL);
+    assert(block_head != block);    // 理论上是不会删除第一个块的，所以该函数内操作的block都有前序block
+    assert(block->prev != NULL);
+    assert(block_head != block || block_tail != block); //不可能将唯一的块删除
+
+    if(block_tail == block){
+        block_tail = block->prev;
+    }
+
+    block->prev->next = block->next;
+    if(block->next != NULL){
+        block->next->prev = block->prev;
+    }
+
+    block->next = NULL;
+    block->prev = NULL;
 }
 
 /*
@@ -200,38 +216,57 @@ block_t* extend_heap(size_t payload_size){
 }
 
 // 收回内存的时候直接合并相邻的; 把新的空闲块加入到空闲链表当中(头插吧要不)
-static void block_free(block_t* block){
-    // printf("调用了free\n");
-    if(free_head == NULL){
-        free_head = block;
-    }
+void block_free(block_t* block){
+    assert(block != NULL);
+    assert(block->is_allocated == 1);
+    assert(block->free_prev == NULL && block->free_next == NULL);
 
     // 首先将当前block的标志位清除
     block->is_allocated = 0;
 
-    block_t* curr = block;
-    assert(curr->free_next == NULL && curr->free_next == NULL);
-    // 尝试与相邻的块合并
-    block_t* prev_block = block->prev;
-    if(prev_block != NULL && prev_block->is_allocated == 0){
-        prev_block->next = curr->next;
-        prev_block->payload_size += sizeof(block_t) + curr->payload_size;
-        curr = prev_block;
+    if(free_head == NULL){
+        free_head = block;
+    }else{
+        block_t* merged_block_ptr = block;
+        block_t* prev_block = block->prev;
+        block_t* next_block = block->next;
+        // 尝试与prev的块合并
+        if(prev_block != NULL && prev_block->is_allocated == 0){
+            drop_from_free_list(prev_block);
+            drop_from_list(block);
+            prev_block->payload_size += sizeof(block_t) + block->payload_size;
+            merged_block_ptr = prev_block;
+        }
+
+        // 尝试与next的块合并
+        if(next_block != NULL && next_block->is_allocated == 0){
+            drop_from_free_list(next_block);
+            drop_from_list(next_block);
+            merged_block_ptr->payload_size += sizeof(block_t) + next_block->payload_size;
+        }
+
+        add_to_free_list(merged_block_ptr);
     }
 
-    block_t* next_block = block->next;
-    if(next_block != NULL && next_block->is_allocated == 0){
-        curr->next = next_block->next;
-        // 首先将next_block从free list中删除
-        drop_from_free_list(next_block);
-        curr->payload_size += sizeof(block_t) + next_block->payload_size;
-    }
+    // block_t* curr = block;
+    // // 尝试与相邻的块合并
+    // block_t* prev_block = block->prev;
+    // if(prev_block != NULL && prev_block->is_allocated == 0){
+    //     prev_block->next = curr->next;
+    //     prev_block->payload_size += sizeof(block_t) + curr->payload_size;
+    //     curr = prev_block;
+    // }
 
-    if(curr->free_next == NULL){
-        add_to_free_list(curr);
-    }
+    // block_t* next_block = block->next;
+    // if(next_block != NULL && next_block->is_allocated == 0){
+    //     curr->next = next_block->next;
+    //     // 首先将next_block从free list中删除
+    //     drop_from_free_list(next_block);
+    //     curr->payload_size += sizeof(block_t) + next_block->payload_size;
+    // }
 
     print_free_list();
+    print_list();
 }
 
 // TODO: 将blcok分割成payload_size和剩下的部分，分割失败返回NULL
