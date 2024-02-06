@@ -101,6 +101,7 @@ void drop_from_free_list(block_t* block){
     INFO("drop_from_free_list()\n");
     assert(block!=NULL);
     assert(block->is_allocated == 0);
+    assert(free_head != NULL);
 
     // 将当前节点从双向链表中去除
     if(free_head == block && block->free_next == NULL){  // 此时free list中只有一个元素
@@ -220,7 +221,7 @@ void block_free(block_t* block){
         // 尝试与prev的块合并
         if(prev_block != NULL && prev_block->is_allocated == 0){
             INFO("prev为free block, 尝试合并\n");
-            drop_from_free_list(block);
+            drop_from_free_list(prev_block);
             drop_from_list(block);
             prev_block->payload_size += sizeof(block_t) + block->payload_size;
             merged_block_ptr = prev_block;
