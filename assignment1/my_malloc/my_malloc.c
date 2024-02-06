@@ -32,15 +32,17 @@ static block_t* get_next_block(block_t* curr){
 }
 
 void print_list(){
-    // if(block_head == NULL){
-    //     printf("链表中尚未有元素");
-    //     return;
-    // }
-    // printf("=================\n");
-    // for(block_t* ptr = block_head; ptr != NULL; ptr = get_next_block(ptr)){
-    //     printf("payload_size = %lu, is_allocated = %d\n",ptr->payload_size, ptr->is_allocated);
-    // }
-    // printf("=================\n");
+    if(block_head == NULL){
+        INFO("list中尚未有元素\n");
+        return;
+    }
+    INFO("~~~~~~~~~~~~~~~~~~\n");
+    block_t* ptr = block_head;
+    while(ptr != NULL){
+        INFO("%lu/%d->",ptr->payload_size, ptr->is_allocated);
+        ptr = ptr->next;
+    }
+    INFO("\n~~~~~~~~~~~~~~~~~~\n");
 }
 
 void print_free_list(){
@@ -141,6 +143,7 @@ void add_to_free_list(block_t* block){
 
     if(block->is_allocated == 1){
         block->is_allocated = 0;
+        INFO("[warning] 添加到free_list中的block的is_allocated标志位为1\n");
     }
 
     if(free_head != NULL){
@@ -156,43 +159,27 @@ void add_to_free_list(block_t* block){
     print_free_list();
 }
 
-// static void drop_from_list(block_t* block){
-//     assert(block!=NULL);
-//     assert(block->next!=NULL && block->prev!=NULL);
+/*
+ * TODO: 感觉没必要分离出来这么一个
+*/
+void drop_from_list(block_t* block){
+}
 
-//     // 将当前节点从双向链表中去除
-//     if(block->next == block){  // 此时free list中只有一个元素
-//         block_head = NULL;
-//         block->next = NULL;
-//         block->prev = NULL;
-//     }else{
-//         if (block_head == block) {
-//             block_head = block->next;
-//         }
-//         block->prev->next = block->next;
-//         block->next->prev = block->prev;
-//     }
+/*
+ * TODO: 感觉没必要分离出来这么一个
+*/
+void add_to_list_tail(block_t* block){
+    if(block_tail != NULL){
+        block_tail->next = block;
+    }
+    block_tail = block;
 
-//     // print_free_list();
-// }
+    if(block_head == NULL){
+        block_head = block;
+    }
 
-// static void add_to_list(block_t* block){
-//     assert(block != NULL);
-//     assert(block->prev==NULL && block->next == NULL);
-
-//     if(block_head != NULL){
-//         block->next = block_head;
-//         block->prev = block_head->prev;
-//         block_head->prev = block;
-//         block->prev->next = block;
-//     }else{
-//         block->next = block;
-//         block->prev = block;
-//     }
-
-//     block_head = block;
-//     // print_free_list();
-// }
+    print_list();
+}
 
 // 如果原先的内存池不够了，那么就拓展制定大小的block
 block_t* extend_heap(size_t payload_size){
@@ -207,15 +194,7 @@ block_t* extend_heap(size_t payload_size){
     new_ptr->free_next = NULL;
     new_ptr->free_prev = NULL;
 
-    if(block_tail != NULL){
-        block_tail->next = new_ptr;
-    }
-    block_tail = new_ptr;
-    if(block_head == NULL){
-        block_head = new_ptr;
-    }
-
-    print_list(block_head);
+    add_to_list_tail(new_ptr);
 
     return new_ptr;
 }
