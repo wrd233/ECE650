@@ -3,21 +3,6 @@
 #include <unistd.h>
 #include <assert.h>
 
-typedef struct block block_t;
-struct block
-{
-    size_t payload_size; 
-    int is_allocated;        
-    block_t* prev;  
-    block_t* next;              // TODO: 感觉可以通过payload计算出来，但可能因为对齐之类的原因，有点难算；之后优化               
-    block_t* free_next;         // free block中的next
-    block_t* free_prev;         // free block中的prev
-    // unsigned char payload[0];   // 真正提供出去的地址
-};
-
-static block_t* block_head = NULL;
-static block_t* block_tail = NULL;
-static block_t* free_head = NULL;
 unsigned long largest_free_size = 0;    // TODO: 添加这个的全局逻辑
 unsigned long free_size_sum = 0;        // TODO: 添加这个的全局逻辑
 
@@ -46,7 +31,7 @@ static block_t* get_next_block(block_t* curr){
     return curr->next;
 }
 
-static void print_list(){
+void print_list(){
     // if(block_head == NULL){
     //     printf("链表中尚未有元素");
     //     return;
@@ -58,19 +43,18 @@ static void print_list(){
     // printf("=================\n");
 }
 
-static void print_free_list(){
-    // if(block_head == NULL){
-    //     printf("free list中尚未有元素");
-    //     return;
-    // }
-    // printf("~~~~~~~~~~~~~~~~~~\n");
-    // block_t* ptr = free_head;
-    // while(ptr->free_next != free_head){
-    //     printf("payload_size = %lu, is_allocated = %d\n",ptr->payload_size, ptr->is_allocated);
-    //      ptr = ptr->free_next;
-    // }
-    // printf("payload_size = %lu, is_allocated = %d\n",ptr->payload_size, ptr->is_allocated);
-    // printf("~~~~~~~~~~~~~~~~~~\n");
+void print_free_list(){
+    if(free_head == NULL){
+        INFO("free list中尚未有元素\n");
+        return;
+    }
+    INFO("~~~~~~~~~~~~~~~~~~\n");
+    block_t* ptr = free_head;
+    while(ptr != NULL){
+        INFO("%lu/%d->",ptr->payload_size, ptr->is_allocated);
+        ptr = ptr->free_next;
+    }
+    INFO("\n~~~~~~~~~~~~~~~~~~\n");
 }
 
 // 使用first fit的策略找到合适的block
@@ -124,44 +108,52 @@ static block_t* find_fit_bf(size_t payload_size){
 }
 
 /*
- *  
+ *  注：从空闲链表中删除不意味着is_allocated需要置为1
 */
-static void drop_from_free_list(block_t* block){
+void drop_from_free_list(block_t* block){
     assert(block!=NULL);
     assert(block->is_allocated == 0);
-    assert(block->free_next!=NULL && block->free_prev!=NULL);
 
     // 将当前节点从双向链表中去除
-    if(block->free_next == block){  // 此时free list中只有一个元素
+    if(free_head == block && block->free_prev == NULL){  // 此时free list中只有一个元素
+        assert(block->free_next == NULL);
         free_head = NULL;
     }else{
+        assert(block->free_next!=NULL || block->free_prev!=NULL);
         if (free_head == block) {
             free_head = block->free_next;
         }
-        block->free_prev->free_next = block->free_next;
-        block->free_next->free_prev = block->free_prev;
+        if(block->free_prev != NULL){
+            block->free_prev->free_next = block->free_next;
+        }
+        if(block->free_next != NULL){
+            block->free_next->free_prev = block->free_prev;
+        }
     }
     block->free_next = NULL;
     block->free_prev = NULL;
-    // print_free_list();
+    print_free_list();
 }
 
-static void add_to_free_list(block_t* block){
+void add_to_free_list(block_t* block){
     assert(block != NULL);
     assert(block->free_prev==NULL && block->free_next == NULL);
 
+    if(block->is_allocated == 1){
+        block->is_allocated = 0;
+    }
+
     if(free_head != NULL){
         block->free_next = free_head;
-        block->free_prev = free_head->free_prev;
+        block->free_prev = NULL;
         free_head->free_prev = block;
-        block->free_prev->free_next = block;
     }else{
-        block->free_next = block;
-        block->free_prev = block;
+        block->free_next = NULL;
+        block->free_prev = NULL;
     }
 
     free_head = block;
-    // print_free_list();
+    print_free_list();
 }
 
 // static void drop_from_list(block_t* block){
@@ -203,7 +195,7 @@ static void add_to_free_list(block_t* block){
 // }
 
 // 如果原先的内存池不够了，那么就拓展制定大小的block
-static block_t* extend_heap(size_t payload_size){
+block_t* extend_heap(size_t payload_size){
     // printf("调用了extend\n");
     size_t size_sum = sizeof(struct block) + payload_size;
     block_t* new_ptr = sbrk(size_sum);
