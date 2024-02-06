@@ -6,20 +6,22 @@
 unsigned long largest_free_size = 0;    // TODO: 添加这个的全局逻辑
 unsigned long free_size_sum = 0;        // TODO: 添加这个的全局逻辑
 
+// TODO:
 static void calFree(){
-    if(free_head == NULL){
-        return;
-    }
-    block_t* ptr = free_head;
-    free_size_sum = 0;
-    largest_free_size = 0;
-    while(ptr->free_next != free_head){
-        free_size_sum += ptr->payload_size;
-        largest_free_size = largest_free_size > ptr->payload_size ? largest_free_size : ptr->payload_size;
-        ptr = ptr->free_next;
-    }
-    free_size_sum += ptr->payload_size;
-    largest_free_size = largest_free_size > ptr->payload_size ? largest_free_size : ptr->payload_size;
+    // if(free_head == NULL){
+    //     return;
+    // }
+    // block_t* ptr = free_head;
+    // free_size_sum = 0;
+    // largest_free_size = 0;
+    // while(ptr->free_next != free_head){
+    //     free_size_sum += ptr->payload_size;
+    //     largest_free_size = largest_free_size > ptr->payload_size ? largest_free_size : ptr->payload_size;
+    //     ptr = ptr->free_next;
+    // }
+    // free_size_sum += ptr->payload_size;
+    // largest_free_size = largest_free_size > ptr->payload_size ? largest_free_size : ptr->payload_size;
+
 }
 
 static block_t* get_next_block(block_t* curr){
@@ -36,13 +38,13 @@ void print_list(){
         INFO("list中尚未有元素\n");
         return;
     }
-    INFO("------------------(list)\n");
+    INFO("                     (list):");
     block_t* ptr = block_head;
     while(ptr != NULL){
         INFO("%lu/%d->",ptr->payload_size, ptr->is_allocated);
         ptr = ptr->next;
     }
-    INFO("\n------------------\n");
+    INFO("\n");
 }
 
 void print_free_list(){
@@ -50,31 +52,23 @@ void print_free_list(){
         INFO("free list中尚未有元素\n");
         return;
     }
-    INFO("~~~~~~~~~~~~~~~~~~(free_list)\n");
+    INFO("                     (free_list):");
     block_t* ptr = free_head;
     while(ptr != NULL){
         INFO("%lu/%d->",ptr->payload_size, ptr->is_allocated);
         ptr = ptr->free_next;
     }
-    INFO("\n~~~~~~~~~~~~~~~~~~\n");
+    INFO("\n");
 }
 
 // 使用first fit的策略找到合适的block
 static block_t* find_fit_ff(size_t payload_size){
-    // printf("尝试寻找ff，当前寻找的size为%lu\n",payload_size);
-    
+    INFO("尝试寻找ff，当前寻找的size为%lu\n",payload_size);
     block_t* current = free_head;
 
-    while (current != NULL) {
-        // 判断该节点能否承载payload
-        if(current->payload_size >= payload_size){
-            return current;
-        }
-        current = current->free_next;
-
-        // 如果当前节点等于头结点，说明已经遍历完整个链表
-        if (current == free_head) {
-            break;
+    for(block_t* curr = free_head; curr != NULL; curr = curr->free_next){
+        if(curr->payload_size >= payload_size){
+            return curr;
         }
     }
 
@@ -83,26 +77,17 @@ static block_t* find_fit_ff(size_t payload_size){
 
 // 使用best fit的策略找到合适的block
 static block_t* find_fit_bf(size_t payload_size){
-    // printf("尝试寻找bf，当前寻找的size为%lu\n",payload_size);
-
-    block_t* current = free_head;
+    INFO("尝试寻找bf，当前寻找的size为%lu\n",payload_size);
     block_t* best_fit_ptr = NULL;
 
-    while (current != NULL) {
+    for(block_t* curr = free_head; curr != NULL; curr = curr->free_next){
         // 判断该节点能否承载payload
-        if(current->payload_size >= payload_size){
+        if(curr->payload_size >= payload_size){
             if(best_fit_ptr == NULL){
-                best_fit_ptr = current;
+                best_fit_ptr = curr;
             }else{
-                best_fit_ptr = best_fit_ptr->payload_size < current->payload_size ? best_fit_ptr : current;
+                best_fit_ptr = best_fit_ptr->payload_size < curr->payload_size ? best_fit_ptr : curr;
             }
-        }
-
-        current = current->free_next;
-
-        // 如果当前节点等于头结点，说明已经遍历完整个链表
-        if (current == free_head) {
-            break;
         }
     }
 
@@ -113,6 +98,7 @@ static block_t* find_fit_bf(size_t payload_size){
  *  注：从空闲链表中删除不意味着is_allocated需要置为1
 */
 void drop_from_free_list(block_t* block){
+    INFO("drop_from_free_list()\n");
     assert(block!=NULL);
     assert(block->is_allocated == 0);
 
@@ -138,6 +124,7 @@ void drop_from_free_list(block_t* block){
 }
 
 void add_to_free_list(block_t* block){
+    INFO("add_to_free_list()\n");
     assert(block != NULL);
     assert(block->free_prev==NULL && block->free_next == NULL);
 
@@ -160,7 +147,7 @@ void add_to_free_list(block_t* block){
 }
 
 /*
- * TODO: 感觉没必要分离出来这么一个
+ * 
 */
 void drop_from_list(block_t* block){
     assert(block!=NULL);
@@ -182,7 +169,7 @@ void drop_from_list(block_t* block){
 }
 
 /*
- * TODO: 感觉没必要分离出来这么一个
+ * 
 */
 void add_to_list_tail(block_t* block){
     if(block_tail != NULL){
@@ -232,7 +219,8 @@ void block_free(block_t* block){
         block_t* next_block = block->next;
         // 尝试与prev的块合并
         if(prev_block != NULL && prev_block->is_allocated == 0){
-            drop_from_free_list(prev_block);
+            INFO("prev为free block, 尝试合并\n");
+            drop_from_free_list(block);
             drop_from_list(block);
             prev_block->payload_size += sizeof(block_t) + block->payload_size;
             merged_block_ptr = prev_block;
@@ -240,6 +228,7 @@ void block_free(block_t* block){
 
         // 尝试与next的块合并
         if(next_block != NULL && next_block->is_allocated == 0){
+            INFO("next为free block, 尝试合并\n");
             drop_from_free_list(next_block);
             drop_from_list(next_block);
             merged_block_ptr->payload_size += sizeof(block_t) + next_block->payload_size;
@@ -247,23 +236,6 @@ void block_free(block_t* block){
 
         add_to_free_list(merged_block_ptr);
     }
-
-    // block_t* curr = block;
-    // // 尝试与相邻的块合并
-    // block_t* prev_block = block->prev;
-    // if(prev_block != NULL && prev_block->is_allocated == 0){
-    //     prev_block->next = curr->next;
-    //     prev_block->payload_size += sizeof(block_t) + curr->payload_size;
-    //     curr = prev_block;
-    // }
-
-    // block_t* next_block = block->next;
-    // if(next_block != NULL && next_block->is_allocated == 0){
-    //     curr->next = next_block->next;
-    //     // 首先将next_block从free list中删除
-    //     drop_from_free_list(next_block);
-    //     curr->payload_size += sizeof(block_t) + next_block->payload_size;
-    // }
 
     print_free_list();
     print_list();
@@ -312,8 +284,8 @@ void * ff_malloc(size_t size){
     if(block_ptr == NULL){  // 此时空闲链表中没有合适的块，所以需要进行拓展
         block_ptr = extend_heap(size);
     }else{  // 从空闲链表中找到合适的块
-        // 如果该空闲块足够大，那么尝试将其分裂
-        block_ptr = splitBlock(block_ptr, size);
+        // // 如果该空闲块足够大，那么尝试将其分裂
+        // block_ptr = splitBlock(block_ptr, size);
         // 从空闲链表中删除这一空闲块
         drop_from_free_list(block_ptr);
 
@@ -330,8 +302,8 @@ void * bf_malloc(size_t size){
     if(block_ptr == NULL){  // 此时空闲链表中没有合适的块，所以需要进行拓展
         block_ptr = extend_heap(size);
     }else{  // 从空闲链表中找到合适的块
-        // 如果该空闲块足够大，那么尝试将其分裂
-        block_ptr = splitBlock(block_ptr, size);
+        // // 如果该空闲块足够大，那么尝试将其分裂
+        // block_ptr = splitBlock(block_ptr, size);
         // 从空闲链表中删除这一空闲块
         drop_from_free_list(block_ptr);
 
@@ -348,6 +320,7 @@ void ff_free(void * ptr){
 
 
 void bf_free(void * ptr){
+    INFO("bf_free()\n");
     block_free((block_t*)((unsigned char*)ptr - sizeof(block_t)));
     calFree();
 }

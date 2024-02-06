@@ -38,29 +38,26 @@ int main(){
     // drop_from_free_list(b7);
 
     /*====对于free&merge的测试====*/
-    block_t* b1 = extend_heap(10);
-    block_t* b2 = extend_heap(20);
-    block_t* b3 = extend_heap(30);
-    block_t* b4 = extend_heap(40);
-    block_t* b5 = extend_heap(50);
-    block_t* b6 = extend_heap(60);
+    // block_t* b1 = extend_heap(10);
+    // block_t* b2 = extend_heap(20);
+    // block_t* b3 = extend_heap(30);
+    // block_t* b4 = extend_heap(40);
+    // block_t* b5 = extend_heap(50);
+    // block_t* b6 = extend_heap(60);
 
-    block_free(b2);
-    block_free(b4);
-    block_free(b3);
+    // block_free(b2);
     // block_free(b4);
-    // block_free(b5);
-    // block_free(b6);
+    // block_free(b3);
 
-
-    // int* p1 = (int*)bf_malloc(10);
-    // int* p2 = (int*)bf_malloc(20);
-    // int* p3 = (int*)bf_malloc(3000);
-    // int* p4 = (int*)bf_malloc(40);
-    // int* p5 = (int*)bf_malloc(50);
+    /*====测试基础的内存分配====*/
+    int* p1 = (int*)bf_malloc(10);
+    int* p2 = (int*)bf_malloc(20);
+    int* p3 = (int*)bf_malloc(3000);
+    int* p4 = (int*)bf_malloc(40);
+    int* p5 = (int*)bf_malloc(50);
   
-    // bf_free(p1);
-    // bf_free(p3);
-    // p1 = (int*)bf_malloc(1200);
-    // p3 = (int*)bf_malloc(10);
+    bf_free(p1);
+    bf_free(p3);
+    p1 = (int*)bf_malloc(1200);
+    p3 = (int*)bf_malloc(10);
 }
