@@ -50,14 +50,48 @@ int main(){
     // block_free(b3);
 
     /*====测试基础的内存分配====*/
-    int* p1 = (int*)bf_malloc(10);
-    int* p2 = (int*)bf_malloc(20);
-    int* p3 = (int*)bf_malloc(3000);
-    int* p4 = (int*)bf_malloc(40);
-    int* p5 = (int*)bf_malloc(50);
+    // int* p1 = (int*)bf_malloc(10);
+    // int* p2 = (int*)bf_malloc(20);
+    // int* p3 = (int*)bf_malloc(3000);
+    // int* p4 = (int*)bf_malloc(40);
+    // int* p5 = (int*)bf_malloc(50);
   
-    bf_free(p1);
+    // bf_free(p1);
+    // bf_free(p3);
+    // p1 = (int*)bf_malloc(1200);
+    // p3 = (int*)bf_malloc(10);
+
+    /*====分裂：待分裂的是第一个元素====*/
+    // int* p1 = (int*)bf_malloc(1000);
+    
+    // bf_free(p1);
+
+    // int* p2 = (int*)bf_malloc(20);
+    // int* p3 = (int*)bf_malloc(100);
+
+    // bf_free(p2);
+    // bf_free(p3);
+
+    /*====分裂：待分裂的元素的荷载刚好等于====*/
+    // TODO:
+    // int* p1 = (int*)bf_malloc(1000);
+    
+    // bf_free(p1);
+
+    // int* p2 = (int*)bf_malloc(20);
+    // int* p3 = (int*)bf_malloc(932);
+
+    // bf_free(p2);
+    // bf_free(p3);
+
+    /*====分裂：待分裂的元素的荷载刚好等于====*/
+    // TODO:
+    int* p1 = (int*)bf_malloc(1000);
+    int* p2 = (int*)bf_malloc(2000);
+    int* p3 = (int*)bf_malloc(100);
+    
+    bf_free(p2);
+    int* p4 = (int*)bf_malloc(1200);
+    int* p5 = (int*)bf_malloc(752);
     bf_free(p3);
-    p1 = (int*)bf_malloc(1200);
-    p3 = (int*)bf_malloc(10);
 }

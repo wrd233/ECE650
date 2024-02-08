@@ -8,20 +8,16 @@ unsigned long free_size_sum = 0;        // TODO: 添加这个的全局逻辑
 
 // TODO:
 static void calFree(){
-    // if(free_head == NULL){
-    //     return;
-    // }
-    // block_t* ptr = free_head;
-    // free_size_sum = 0;
-    // largest_free_size = 0;
-    // while(ptr->free_next != free_head){
-    //     free_size_sum += ptr->payload_size;
-    //     largest_free_size = largest_free_size > ptr->payload_size ? largest_free_size : ptr->payload_size;
-    //     ptr = ptr->free_next;
-    // }
-    // free_size_sum += ptr->payload_size;
-    // largest_free_size = largest_free_size > ptr->payload_size ? largest_free_size : ptr->payload_size;
-
+    if(free_head == NULL){
+        return;
+    }
+    block_t* ptr = free_head;
+    free_size_sum = 0;
+    largest_free_size = 0;
+    for(block_t* ptr = free_head; ptr != NULL; ptr = ptr->free_next){
+        free_size_sum += ptr->payload_size;
+        largest_free_size = largest_free_size > ptr->payload_size ? largest_free_size : ptr->payload_size;
+    }
 }
 
 static block_t* get_next_block(block_t* curr){
@@ -108,6 +104,7 @@ void drop_from_free_list(block_t* block){
         assert(block->free_prev == NULL);
         free_head = NULL;
     }else{
+        fflush(stdout);
         assert(block->free_next!=NULL || block->free_prev!=NULL);
         if (free_head == block) {
             free_head = block->free_next;
@@ -219,6 +216,7 @@ void block_free(block_t* block){
         block_t* prev_block = block->prev;
         block_t* next_block = block->next;
         // 尝试与prev的块合并
+
         if(prev_block != NULL && prev_block->is_allocated == 0){
             INFO("prev为free block, 尝试合并\n");
             drop_from_free_list(prev_block);
@@ -246,9 +244,16 @@ void block_free(block_t* block){
 static block_t* splitBlock(block_t* block, size_t payload_size){
     // TODO: 分割空闲块，并将分割之后的后半个block加入到空闲链表当中
     assert(block != NULL);
-    // printf("当前块的大小为%lu, 期望分配%lu\n",block->payload_size, payload_size);
+    assert(payload_size >= 0);
+    if(free_head != block){
+        assert(block->free_next != NULL || block->free_prev != NULL);
+    }
 
+    INFO("当前块的大小为%lu, 期望分配%lu\n",block->payload_size, payload_size);
+
+    // TODO: 当下面两个内容相同的时候，会出现问题
     if(block->payload_size >= sizeof(block_t) + payload_size){
+        INFO("尝试进行分裂\n");
         // 创建新的节点
         size_t offset = payload_size + sizeof(block_t);
         block_t* new_block_ptr = (block_t*)((unsigned char*)block + offset);
@@ -271,9 +276,7 @@ static block_t* splitBlock(block_t* block, size_t payload_size){
         new_block_ptr->prev = block;
 
         // 测试
-        // printf("[分裂完成]分成了%lu和%lu大小的两块\n",block->payload_size, new_block_ptr->payload_size);
-        // print_list();
-        // print_free_list();
+        INFO("[分裂完成]分成了%lu和%lu大小的两块\n",block->payload_size, new_block_ptr->payload_size);
     }
     return block;
 }
