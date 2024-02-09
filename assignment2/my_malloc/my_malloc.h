@@ -4,23 +4,6 @@
 #include <stdlib.h>
 #include "macro.h"
 
-//Best Fit malloc
-void * bf_malloc(size_t size);
-
-//Best Fit free
-void bf_free(void * ptr);
-
-//Thread Safe malloc/free: locking version
-void *ts_malloc_lock(size_t size);
-void ts_free_lock(void *ptr);
-
-//Thread Safe malloc/free: non-locking version
-void *ts_malloc_nolock(size_t size);
-void ts_free_nolock(void *ptr);
-
-unsigned long get_largest_free_data_segment_size(); 
-unsigned long get_total_free_size();
-
 
 typedef struct block block_t;
 struct block
@@ -34,14 +17,33 @@ struct block
     // unsigned char payload[0];   // 真正提供出去的地址
 };
 
-static block_t* block_head = NULL;
-static block_t* block_tail = NULL;
-static block_t* free_head = NULL;
+typedef struct global_list_info {
+    block_t** block_head_ptr;
+    block_t** block_tail_ptr;
+    block_t** free_head_ptr;
+} global_t;
 
-void print_free_list();
-void drop_from_free_list(block_t* block);
-void add_to_free_list(block_t* block);
-void block_free(block_t* block);
-block_t* extend_heap(size_t payload_size);
+//Best Fit malloc
+void * bf_malloc(size_t size, global_t* global_list_info, int is_sbrk_locked);
+
+//Best Fit free
+void bf_free(void * ptr, global_t* global_list_info);
+
+//Thread Safe malloc/free: locking version
+void *ts_malloc_lock(size_t size);
+void ts_free_lock(void *ptr);
+
+//Thread Safe malloc/free: non-locking version
+void *ts_malloc_nolock(size_t size);
+void ts_free_nolock(void *ptr);
+
+unsigned long get_largest_free_data_segment_size(); 
+unsigned long get_total_free_size();
+
+void print_free_list(global_t* global_list_info);
+void drop_from_free_list(block_t* block, global_t* global_list_info);
+void add_to_free_list(block_t* block, global_t* global_list_info);
+void block_free(block_t* block, global_t* global_list_info);
+block_t* extend_heap(size_t payload_size, global_t* global_list_info, int is_sbrk_locked);
 
 #endif /* MY_MALLOC_H */
