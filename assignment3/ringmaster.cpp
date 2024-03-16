@@ -8,8 +8,25 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <assert.h>
+#include <vector>
 
 #include "utils.hpp"
+
+struct PlayerItem{
+    int fd;
+    int port;
+    std::string ip;
+};
+
+void printPlayers(std::vector<PlayerItem>& players){
+    std::cout<<"当前players的个数为: "<<players.size()<<std::endl;;
+
+    for(int i=0; i<players.size(); i++){
+        PlayerItem temp = players[i];
+        printf("[%d] port = %d ", i, temp.port);
+        std::cout<< temp.ip<<std::endl;
+    }
+}
 
 int main(int argc, char *argv[]) {
     if (argc != 4) {
@@ -20,6 +37,8 @@ int main(int argc, char *argv[]) {
     int port = atoi(argv[1]);
     int num_players = atoi(argv[2]);
     int num_hops = atoi(argv[3]);
+
+    std::vector<PlayerItem> players;
 
     // 在这里使用接收到的参数进行后续操作
     printf("Potato Ringmaster\n");
@@ -35,6 +54,7 @@ int main(int argc, char *argv[]) {
 
         // 测试性质的输入
         INFO("连入的player的IP为: %s",inet_ntoa(client.sin_addr));
+        std::string ipStr(inet_ntoa(client.sin_addr));
 
         // 发送必要的信息
         send(player_fd, &i, sizeof(i), 0);
@@ -45,9 +65,21 @@ int main(int argc, char *argv[]) {
         recv(player_fd, &player_port, sizeof(player_port), 0);
         INFO("Player的端口为: %d", player_port);
         
-        // close( player_fd );
+        // 将当前的player加入到vector中
+        players.push_back({player_fd, player_port, ipStr});
 
         std::cout << "Player " << i << " is ready to play " << std::endl;
+    }
+
+    printPlayers(players);
+
+
+    // 传递neighbor
+    for(int i=0; i<num_players; i++){
+        PlayerItem client = players[i];
+        PlayerItem neighbor = players[(i+1) % num_players];
+        send(client.fd, &neighbor.port, sizeof(neighbor.port), 0);
+        send(client.fd, neighbor.ip.c_str(), neighbor.ip.length(), 0);
     }
 
     return 0;

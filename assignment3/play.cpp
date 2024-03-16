@@ -30,6 +30,14 @@ int main(int argc, char * argv[]){
     INFO("player[%d]所占用的端口为 %d", player_id, player_fd_port);
     send(master_fd, &player_fd_port, sizeof(player_fd_port), 0);
 
+    // 分配邻居
+    int neighbor_port;
+    recv(master_fd, &neighbor_port, sizeof(neighbor_port), MSG_WAITALL);
+    char buf_size[1024] = {0};
+    recv(master_fd, buf_size, sizeof(buf_size), MSG_WAITALL);
+    std::string neighbor_ip(buf_size);
+
+    INFO("邻居的IP = %s, port = %d", buf_size, neighbor_port);
 
     return 0;
 }
