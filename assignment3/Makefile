@@ -1,5 +1,5 @@
 CC = g++
-CFLAGS = -Wall -Wextra
+CFLAGS = -Wall -Wextra -g
 
 # 添加utils.cpp到编译目标
 all: play ringmaster

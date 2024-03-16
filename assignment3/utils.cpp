@@ -52,7 +52,9 @@ int build_server(int port){
 	memset( &address, 0, sizeof( address ) );
 	address.sin_family = AF_INET;
 	address.sin_port = htons( port );
-	inet_pton( AF_INET, get_ip_from_name(get_host_name()).c_str(), &address.sin_addr );
+	inet_pton( AF_INET, "0.0.0.0", &address.sin_addr );
+
+    // INFO("server ip = %s", get_ip_from_name(get_host_name()).c_str());
 
 	int ret = 0;
 	ret = bind( listenfd, (struct sockaddr*)( &address ), sizeof( address ) );
@@ -60,7 +62,6 @@ int build_server(int port){
 
 	ret = listen( listenfd, 100 );
 	assert( ret != -1 );
-
     return listenfd;
 }
 
@@ -68,6 +69,7 @@ int build_client(const char * hostname, int port){
     int client_fd = socket( PF_INET, SOCK_STREAM, 0 );
     std::string ip_str = get_ip_from_name(hostname);
     struct sockaddr_in addr;
+    inet_pton(AF_INET, ip_str.c_str(), &(addr.sin_addr.s_addr));
     addr.sin_family = AF_INET;
 
     // 将 IP 地址从字符串转换为二进制形式，并存储到结构中
@@ -77,6 +79,8 @@ int build_client(const char * hostname, int port){
     }
 
     addr.sin_port = htons(port); // 使用网络字节序表示的端口号
+
+    // INFO("client ip = %s", ip_str.c_str());
 
     int ret = connect(client_fd, (struct sockaddr*)( &addr ), sizeof( addr ) );
     assert( ret != -1 );
