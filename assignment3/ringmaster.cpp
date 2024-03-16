@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
         int player_fd = accept( listen_fd, (struct sockaddr*)(&client), &client_addrlength );
 
         // 测试性质的输入
-        std::cout<<"连入的player的IP为:"<<inet_ntoa(client.sin_addr)<<std::endl;
+        INFO("连入的player的IP为: %s",inet_ntoa(client.sin_addr));
 
         // 发送必要的信息
         send(player_fd, &i, sizeof(i), 0);
@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
         // 接受player提供的port
         int player_port;
         recv(player_fd, &player_port, sizeof(player_port), 0);
-        std::cout<< "Player的端口为:"<<player_port<<std::endl;
+        INFO("Player的端口为: %d", player_port);
         
         // close( player_fd );
 

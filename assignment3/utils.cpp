@@ -19,7 +19,7 @@ std::string get_host_name(){
     }
     std::string hostNameString(hostname);
 
-    std::cout<<hostNameString<<std::endl;
+    INFO("host name : %s", hostname);
 
     return hostNameString;
 }
@@ -37,7 +37,8 @@ std::string get_ip_from_name(std::string hostname){
     struct sockaddr_in* ipv4 = reinterpret_cast<struct sockaddr_in*>(addr->ai_addr);
     char ipAddr[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &(ipv4->sin_addr), ipAddr, INET_ADDRSTRLEN);
-    std::cout << "IP Address: " << ipAddr << std::endl;
+
+    INFO("Host's IP Address: %s", ipAddr);
 
     return ipAddr;
 }
@@ -81,4 +82,19 @@ int build_client(const char * hostname, int port){
     assert( ret != -1 );
 
     return client_fd;
+}
+
+int get_port_num(int socket){
+    struct sockaddr_in addr;
+    socklen_t addr_len = sizeof(addr);
+
+    // 使用 getsockname 函数获取套接字地址信息
+    if (getsockname(socket, reinterpret_cast<struct sockaddr*>(&addr), &addr_len) == -1) {
+        perror("getsockname() failed");
+        return -1;
+    }
+
+    // 从套接字地址中提取端口号，并将其转换为主机字节序
+    int port = ntohs(addr.sin_port);
+    return port;
 }
