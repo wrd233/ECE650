@@ -1,6 +1,7 @@
 #include <iostream>
 #include <pqxx/pqxx>
 #include <string>
+#include <vector>
 
 using namespace std;
 using namespace pqxx;
@@ -33,5 +34,15 @@ void query3(connection *C, string team_name);
 void query4(connection *C, string team_state, string team_color);
 
 void query5(connection *C, int num_wins);
+
+void executeOneSQL(connection *C, string SQL);
+
+void executeSQLFile(connection *C, string fileName);
+
+void insertFromFile(connection *C, const string &fileName, const string &tableName, const vector<string> &columns);
+
+void dropTable(connection *C, string tableName);
+
+string escapeSingleQuotes(const string& str);
 
 #endif //_QUERY_FUNCS_

@@ -30,6 +30,15 @@ int main (int argc, char *argv[])
 
   //TODO: create PLAYER, TEAM, STATE, and COLOR tables in the ACC_BBALL database
   //      load each table with rows from the provided source txt files
+  dropTable(C, "PLAYER");
+  dropTable(C, "TEAM");
+  dropTable(C, "STATE");
+  dropTable(C, "COLOR");
+  executeSQLFile(C, "table.sql");
+  insertFromFile(C, "color.txt", "color", {"NAME"});
+  insertFromFile(C, "state.txt", "state", {"NAME"});
+  insertFromFile(C, "team.txt", "team", {"NAME", "STATE_ID", "COLOR_ID", "WINS", "LOSSES"});
+  insertFromFile(C, "player.txt", "player", {"TEAM_ID", "UNIFORM_NUM", "FIRST_NAME", "LAST_NAME", "MPG", "PPG", "RPG", "APG", "SPG", "BPG"});
 
 
   exercise(C);
