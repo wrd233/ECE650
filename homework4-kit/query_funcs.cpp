@@ -69,6 +69,55 @@ void query1(connection *C,
             int use_bpg, double min_bpg, double max_bpg
             )
 {
+    string SQL = "SELECT * FROM PLAYER WHERE";
+    vector<string> whereStatement;
+    if (use_mpg != 0) {
+        whereStatement.push_back("MPG <= " + std::to_string(max_mpg) + " AND " + "MPG >= " + std::to_string(min_mpg));
+    }
+    if (use_ppg != 0) {
+        whereStatement.push_back("PPG <= " + std::to_string(max_ppg) + " AND " + "PPG >= " + std::to_string(min_ppg));
+    }
+    if (use_rpg != 0) {
+        whereStatement.push_back("RPG <= " + std::to_string(max_rpg) + " AND " + "RPG >= " + std::to_string(min_rpg));
+    }
+    if (use_apg != 0) {
+        whereStatement.push_back("APG <= " + std::to_string(max_apg) + " AND " + "APG >= " + std::to_string(min_apg));
+    }
+    if (use_spg != 0) {
+        whereStatement.push_back("SPG <= " + std::to_string(max_spg) + " AND " + "SPG >= " + std::to_string(min_spg));
+    }
+    if (use_bpg != 0) {
+        whereStatement.push_back("BPG <= " + std::to_string(max_bpg) + " AND " + "BPG >= " + std::to_string(min_bpg));
+    }
+    if (whereStatement.empty()) {
+        // 此时每个都无效，直接返回
+        return;
+    }
+
+    // 组装SQL
+    SQL += " " + whereStatement[0];
+    for (size_t i = 1; i < whereStatement.size(); i++) {
+        SQL += " AND " + whereStatement[i];
+    }
+    SQL += ";";
+
+    // cout<<"query1: "<<SQL<<endl;
+    
+    nontransaction N(*C);
+    result res;
+    try {
+        res = N.exec(SQL);
+    } catch (const pqxx::pqxx_exception &e) {
+        throw "Error";
+    }
+
+    cout << "PLAYER_ID TEAM_ID UNIFORM_NUM FIRST_NAME LAST_NAME MPG PPG RPG APG SPG BPG" << endl;
+    for (const auto& row : res) {
+        for (const auto& value : row) {
+            cout << value.c_str() << " ";
+        }
+        cout << endl;
+    }
 }
 
 

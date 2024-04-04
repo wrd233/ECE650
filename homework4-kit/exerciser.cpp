@@ -2,5 +2,4 @@
 
 void exercise(connection *C)
 {
-
 }
