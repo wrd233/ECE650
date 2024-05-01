@@ -11,6 +11,8 @@
 
 #include "utils.hpp"
 
+using namespace std;
+
 std::string get_host_name(){
     char hostname[256];
     if (gethostname(hostname, sizeof(hostname)) != 0) {
@@ -45,24 +47,58 @@ std::string get_ip_from_name(std::string hostname){
 
 
 int build_server(int port){
-    int listenfd = socket( PF_INET, SOCK_STREAM, 0 );
-	assert( listenfd >= 1 );
+    const char* portStr = std::to_string(port).c_str();
+    const char * hostname = NULL;
+    struct addrinfo host_info;
+    struct addrinfo * host_info_list;
+    int status;
+    int socket_fd;
 
-    struct sockaddr_in address;
-	memset( &address, 0, sizeof( address ) );
-	address.sin_family = AF_INET;
-	address.sin_port = htons( port );
-	inet_pton( AF_INET, "0.0.0.0", &address.sin_addr );
+    memset(&host_info, 0, sizeof(host_info));
+    host_info.ai_family = AF_UNSPEC;
+    host_info.ai_socktype = SOCK_STREAM;
+    host_info.ai_flags = AI_PASSIVE;
 
-    // INFO("server ip = %s", get_ip_from_name(get_host_name()).c_str());
+    status = getaddrinfo(hostname, portStr, &host_info, &host_info_list);
+    if (status != 0) {
+        cerr << "Error: cannot get address info for host" << endl;
+        cerr << "  (" << hostname << "," << port << ")" << endl;
+        exit(EXIT_FAILURE);
+    }
 
-	int ret = 0;
-	ret = bind( listenfd, (struct sockaddr*)( &address ), sizeof( address ) );
-	assert( ret != -1 );
+    if (strcmp(portStr, "0") == 0) {
+        struct sockaddr_in * addr_in = (struct sockaddr_in *)(host_info_list->ai_addr);
+        addr_in->sin_port = 0;
+    }
 
-	ret = listen( listenfd, 100 );
-	assert( ret != -1 );
-    return listenfd;
+    socket_fd = socket(host_info_list->ai_family,
+                        host_info_list->ai_socktype,
+                        host_info_list->ai_protocol);
+    if (socket_fd == -1) {
+        cerr << "Error: cannot create socket" << endl;
+        cerr << "  (" << hostname << "," << port << ")" << endl;
+        exit(EXIT_FAILURE);
+    }
+
+    int yes = 1;
+    status = setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
+    status = bind(socket_fd, host_info_list->ai_addr, host_info_list->ai_addrlen);
+    if (status == -1) {
+        cerr << "Error: cannot bind socket" << endl;
+        cerr << "  (" << hostname << "," << port << ")" << endl;
+        exit(EXIT_FAILURE);
+    }
+
+    status = listen(socket_fd, 100);
+    if (status == -1) {
+        cerr << "Error: cannot listen on socket" << endl;
+        cerr << "  (" << hostname << "," << port << ")" << endl;
+        exit(EXIT_FAILURE);
+    }
+
+    //cout << "Waiting for connection on port " << port << endl;
+    freeaddrinfo(host_info_list);
+    return socket_fd;
 }
 
 int build_client(const char * hostname, int port){

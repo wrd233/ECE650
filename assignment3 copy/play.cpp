@@ -13,6 +13,8 @@
 #include "utils.hpp"
 #include "potato.hpp"
 
+using namespace std;
+
 int main(int argc, char * argv[]){
     if (argc != 3) {
         printf("Usage: %s <machine_name> <port_num>\n", argv[0]);
@@ -76,12 +78,36 @@ int main(int argc, char * argv[]){
             }
         }
 
-        potato.num_hops--;
-        potato.path[potato.count++] = player_id;
-        // send(left_neighbor_fd, &potato, sizeof(potato), 0);
+        //receive num_hops =0 potato from master or shut down signal 0 from other socket, shut down
+        if (potato.num_hops == 0 || buffer_size == 0) {
+            break;
+        }
+        //send potato to master
+        else if (potato.num_hops == 1) {
+            potato.num_hops--;
+            potato.path[potato.count] = player_id;
+            potato.count++;
+            send(master_fd, &potato, sizeof(potato), 0);
+            cout << "I'm it" << endl;
+        }
+        //send potato to neighbor
+        else {
+            potato.num_hops--;
+            potato.path[potato.count] = player_id;
+            potato.count++;
+            int random = rand() % 2;
+            if (random == 0) {
+                send(left_neighbor_fd, &potato, sizeof(potato), 0);
+                int left_neighbor_id = (player_id + num_players - 1) % num_players;
+                cout << "Sending potato to " << left_neighbor_id << endl;
+            }
+            else {
+                send(right_neighbor_fd, &potato, sizeof(potato), 0);
+                int right_neighbor_id = (player_id + 1) % num_players;
+                cout << "Sending potato to " << right_neighbor_id << endl;
+            }
+        }
 
-
-        INFO("收到了土豆，hop=%d", potato.num_hops);
     }
 
     return 0;
