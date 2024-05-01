@@ -2,74 +2,102 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+
 void copy_file(const char * src, const char * dest) {
-  FILE* srcFile = fopen(src, "rb");
-  if (srcFile == NULL) {
-      perror("无法打开源文件");
-      exit(EXIT_FAILURE);
+  if (src == NULL || dest == NULL) {
+    exit(-1);
   }
 
-  FILE* destFile = fopen(dest, "wb");
+  FILE * srcFile = fopen(src, "r");
+  if (srcFile == NULL) {
+    printf("Could not open file %s.\n", src);
+    exit(-1);
+  }
+
+  FILE * destFile = fopen(dest, "w+");
   if (destFile == NULL) {
-      perror("无法创建或打开目标文件");
-      exit(EXIT_FAILURE);
+    printf("Could not open file %s.\n", dest);
+    fclose(srcFile);
+    exit(-1);
   }
   
-  // 逐字符复制源文件到目标文件
   char c;
-  while ((c = fgetc(srcFile)) != EOF) {
-      fputc(c, destFile);
+  while ((c = fgetc(srcFile)) != -1) {
+    fputc(c, destFile);
   }
 
-  if (fclose(destFile) == EOF) {
-      perror("无法关闭目标文件");
-      exit(EXIT_FAILURE);
-  }
-
-  if (fclose(srcFile) == EOF) {
-      perror("无法关闭源文件");
-      exit(EXIT_FAILURE);
-  }
+  fclose(destFile);
+  fclose(srcFile);
 }
 
-// void insertLine(const char * dest, const char * line) {
-//   if (dest == NULL || line == NULL) {
-//     exit(-1);
+// void copy_file(const char * src, const char * dest) {
+//   FILE* srcFile = fopen(src, "rb");
+//   if (srcFile == NULL) {
+//       perror("无法打开源文件");
+//       exit(EXIT_FAILURE);
 //   }
 
-//   FILE * destFile = fopen(dest, "a");
+//   FILE* destFile = fopen(dest, "wb");
 //   if (destFile == NULL) {
-//     printf("Could not open file %s.\n", dest);
-//     exit(-1);
+//       perror("无法创建或打开目标文件");
+//       exit(EXIT_FAILURE);
+//   }
+  
+//   // 逐字符复制源文件到目标文件
+//   char c;
+//   while ((c = fgetc(srcFile)) != EOF) {
+//       fputc(c, destFile);
 //   }
 
-//   while (*line != '\0') {
-//     fputc(*line, destFile);
-//     ++line;
+//   if (fclose(destFile) == EOF) {
+//       perror("无法关闭目标文件");
+//       exit(EXIT_FAILURE);
 //   }
 
-//   fclose(destFile);
+//   if (fclose(srcFile) == EOF) {
+//       perror("无法关闭源文件");
+//       exit(EXIT_FAILURE);
+//   }
 // }
 
-void insert_line_into_file(const char* filePath, const char* line) {
-  if (filePath == NULL || line == NULL) {
-    exit(EXIT_FAILURE);
+void insert_line_into_file(const char * dest, const char * line) {
+  if (dest == NULL || line == NULL) {
+    exit(-1);
   }
 
-  FILE* file = fopen(filePath, "a");
-  if (file == NULL) {
-    exit(EXIT_FAILURE);
+  FILE * destFile = fopen(dest, "a");
+  if (destFile == NULL) {
+    printf("Could not open file %s.\n", dest);
+    exit(-1);
   }
 
-  const char* currentChar = line;
-  while (*currentChar != '\0') {
-    char character = *currentChar;
-    fputc(*currentChar, file);
-    ++currentChar;
+  while (*line != '\0') {
+    fputc(*line, destFile);
+    ++line;
   }
 
-  fclose(file);
+  fclose(destFile);
 }
+
+// void insert_line_into_file(const char* filePath, const char* line) {
+//   if (filePath == NULL || line == NULL) {
+//     exit(EXIT_FAILURE);
+//   }
+
+//   FILE* file = fopen(filePath, "a");
+//   if (file == NULL) {
+//     exit(EXIT_FAILURE);
+//   }
+
+//   const char* currentChar = line;
+//   while (*currentChar != '\0') {
+//     char character = *currentChar;
+//     fputc(*currentChar, file);
+//     ++currentChar;
+//   }
+
+//   fclose(file);
+// }
 
 
 int main() {
